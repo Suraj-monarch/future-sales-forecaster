@@ -1,3 +1,5 @@
+// src/pages/Settings.tsx
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -6,15 +8,77 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { API_BASE_URL } from "@/lib/api";
 
 const Settings = () => {
   const { toast } = useToast();
+  const [payload, setPayload] = useState<any>({
+    profile: { firstName: "", lastName: "", email: "", company: "" },
+    model: { predictionModel: "advanced", defaultPeriod: 30, confidenceThreshold: 85 },
+    notifications: { email: true, weekly: true, lowAccuracy: true },
+    data: { autoUpdate: true, retentionYears: 2 },
+  });
+  const [loading, setLoading] = useState(false);
 
-  const handleSave = () => {
-    toast({
-      title: "Settings saved",
-      description: "Your preferences have been updated successfully",
-    });
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/settings`);
+      if (!res.ok) throw new Error("Failed to fetch settings");
+      const json = await res.json();
+      const p = json.payload ?? json;
+      // Merge with defaults so UI fields always exist
+      setPayload((prev: any) => ({
+        profile: { ...prev.profile, ...(p.profile ?? {}) },
+        model: { ...prev.model, ...(p.model ?? {}) },
+        notifications: { ...prev.notifications, ...(p.notifications ?? {}) },
+        data: { ...prev.data, ...(p.data ?? {}) },
+      }));
+    } catch (e) {
+      console.warn("Settings fetch failed:", e);
+      toast({
+        title: "Could not load settings",
+        description: "Using defaults — settings will save normally.",
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/settings`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payload }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Save failed");
+      }
+
+      toast({
+        title: "Settings saved",
+        description: "Your preferences have been updated successfully",
+      });
+
+      // Reload saved settings from backend into the form (ensures UI reflects server state)
+      await fetchSettings();
+
+      // Notify other pages to refresh analytics/history
+      window.dispatchEvent(new Event("data-updated"));
+    } catch (e: any) {
+      console.error("Settings save error:", e);
+      toast({
+        title: "Save failed",
+        description: e?.message ?? "Could not save settings. See console.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -22,9 +86,7 @@ const Settings = () => {
       <div className="container mx-auto px-6 py-8 max-w-4xl">
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your preferences and application configuration
-          </p>
+          <p className="text-muted-foreground">Manage your preferences and application configuration</p>
         </div>
 
         <div className="space-y-6">
@@ -35,20 +97,41 @@ const Settings = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="firstName">First Name</Label>
-                  <Input id="firstName" placeholder="John" />
+                  <Input
+                    id="firstName"
+                    placeholder="John"
+                    value={payload.profile?.firstName || ""}
+                    onChange={(e) => setPayload({ ...payload, profile: { ...payload.profile, firstName: e.target.value } })}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="lastName">Last Name</Label>
-                  <Input id="lastName" placeholder="Doe" />
+                  <Input
+                    id="lastName"
+                    placeholder="Doe"
+                    value={payload.profile?.lastName || ""}
+                    onChange={(e) => setPayload({ ...payload, profile: { ...payload.profile, lastName: e.target.value } })}
+                  />
                 </div>
               </div>
               <div>
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="john.doe@example.com" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="john.doe@example.com"
+                  value={payload.profile?.email || ""}
+                  onChange={(e) => setPayload({ ...payload, profile: { ...payload.profile, email: e.target.value } })}
+                />
               </div>
               <div>
                 <Label htmlFor="company">Company</Label>
-                <Input id="company" placeholder="Your company name" />
+                <Input
+                  id="company"
+                  placeholder="Your company name"
+                  value={payload.profile?.company || ""}
+                  onChange={(e) => setPayload({ ...payload, profile: { ...payload.profile, company: e.target.value } })}
+                />
               </div>
             </div>
           </Card>
@@ -59,7 +142,10 @@ const Settings = () => {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="modelType">Prediction Model</Label>
-                <Select defaultValue="advanced">
+                <Select
+                  value={payload.model?.predictionModel || "advanced"}
+                  onValueChange={(v) => setPayload({ ...payload, model: { ...payload.model, predictionModel: v } })}
+                >
                   <SelectTrigger id="modelType">
                     <SelectValue />
                   </SelectTrigger>
@@ -70,10 +156,13 @@ const Settings = () => {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <Label htmlFor="timeframe">Default Forecast Period</Label>
-                <Select defaultValue="30">
+                <Select
+                  value={`${payload.model?.defaultPeriod ?? 30}`}
+                  onValueChange={(v) => setPayload({ ...payload, model: { ...payload.model, defaultPeriod: Number(v) } })}
+                >
                   <SelectTrigger id="timeframe">
                     <SelectValue />
                   </SelectTrigger>
@@ -88,7 +177,14 @@ const Settings = () => {
 
               <div>
                 <Label htmlFor="confidence">Confidence Threshold (%)</Label>
-                <Input id="confidence" type="number" defaultValue="85" min="0" max="100" />
+                <Input
+                  id="confidence"
+                  type="number"
+                  value={payload.model?.confidenceThreshold ?? 85}
+                  min={0}
+                  max={100}
+                  onChange={(e) => setPayload({ ...payload, model: { ...payload.model, confidenceThreshold: Number(e.target.value) } })}
+                />
               </div>
             </div>
           </Card>
@@ -102,7 +198,10 @@ const Settings = () => {
                   <p className="font-medium">Email Notifications</p>
                   <p className="text-sm text-muted-foreground">Receive prediction alerts via email</p>
                 </div>
-                <Switch defaultChecked />
+                <Switch
+                  checked={payload.notifications?.email ?? true}
+                  onCheckedChange={(v) => setPayload({ ...payload, notifications: { ...payload.notifications, email: v } })}
+                />
               </div>
               <Separator />
               <div className="flex items-center justify-between">
@@ -110,7 +209,10 @@ const Settings = () => {
                   <p className="font-medium">Weekly Reports</p>
                   <p className="text-sm text-muted-foreground">Get weekly performance summaries</p>
                 </div>
-                <Switch defaultChecked />
+                <Switch
+                  checked={payload.notifications?.weekly ?? true}
+                  onCheckedChange={(v) => setPayload({ ...payload, notifications: { ...payload.notifications, weekly: v } })}
+                />
               </div>
               <Separator />
               <div className="flex items-center justify-between">
@@ -118,7 +220,10 @@ const Settings = () => {
                   <p className="font-medium">Low Accuracy Alerts</p>
                   <p className="text-sm text-muted-foreground">Alert when predictions fall below threshold</p>
                 </div>
-                <Switch defaultChecked />
+                <Switch
+                  checked={payload.notifications?.lowAccuracy ?? true}
+                  onCheckedChange={(v) => setPayload({ ...payload, notifications: { ...payload.notifications, lowAccuracy: v } })}
+                />
               </div>
             </div>
           </Card>
@@ -132,7 +237,10 @@ const Settings = () => {
                   <p className="font-medium">Auto-update Data</p>
                   <p className="text-sm text-muted-foreground">Automatically refresh data daily</p>
                 </div>
-                <Switch defaultChecked />
+                <Switch
+                  checked={payload.data?.autoUpdate ?? true}
+                  onCheckedChange={(v) => setPayload({ ...payload, data: { ...payload.data, autoUpdate: v } })}
+                />
               </div>
               <Separator />
               <div className="flex items-center justify-between">
@@ -140,7 +248,10 @@ const Settings = () => {
                   <p className="font-medium">Data Retention</p>
                   <p className="text-sm text-muted-foreground">Keep historical data for 2 years</p>
                 </div>
-                <Select defaultValue="2">
+                <Select
+                  value={`${payload.data?.retentionYears ?? 2}`}
+                  onValueChange={(v) => setPayload({ ...payload, data: { ...payload.data, retentionYears: v } })}
+                >
                   <SelectTrigger className="w-32">
                     <SelectValue />
                   </SelectTrigger>
@@ -156,8 +267,8 @@ const Settings = () => {
           </Card>
 
           <div className="flex gap-4 justify-end">
-            <Button variant="outline">Cancel</Button>
-            <Button onClick={handleSave}>Save Changes</Button>
+            <Button variant="outline" onClick={fetchSettings} disabled={loading}>Cancel</Button>
+            <Button onClick={handleSave} disabled={loading}>{loading ? "Saving..." : "Save Changes"}</Button>
           </div>
         </div>
       </div>

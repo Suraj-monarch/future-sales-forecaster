@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+node_modules/ 
+backend/venv/ 
+backend/app_data.db 
+backend/uploads/ 
+dist/ 

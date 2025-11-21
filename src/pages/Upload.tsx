@@ -1,21 +1,41 @@
+// src/pages/Upload.tsx
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload as UploadIcon, FileSpreadsheet, FileText, CheckCircle } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { API_BASE_URL } from "@/lib/api";
 
 const Upload = () => {
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
   const { toast } = useToast();
+  const [uploading, setUploading] = useState(false);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+    setUploading(true);
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      const res = await fetch(`${API_BASE_URL}/upload`, { method: "POST", body: form });
+      if (!res.ok) throw new Error("Upload failed");
+      const json = await res.json();
       setUploadedFile(file.name);
       toast({
         title: "File uploaded successfully",
-        description: `${file.name} is ready for processing`,
+        description: `${file.name} is saved on server`,
       });
+      // notify other pages to refresh analytics/history
+      window.dispatchEvent(new Event("data-updated"));
+    } catch (e) {
+      console.error("Upload error:", e);
+      toast({
+        title: "Upload failed",
+        description: "Something went wrong while uploading file.",
+      });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -24,35 +44,23 @@ const Upload = () => {
       <div className="container mx-auto px-6 py-8 max-w-4xl">
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">Upload Data</h1>
-          <p className="text-muted-foreground">
-            Import your sales data from CSV or Excel files for analysis
-          </p>
+          <p className="text-muted-foreground">Import your sales data from CSV or Excel files for analysis</p>
         </div>
 
         <div className="space-y-6">
           <Card className="p-8">
             <div className="border-2 border-dashed border-border rounded-lg p-12 text-center hover:border-primary transition-colors">
-              <input
-                type="file"
-                id="fileInput"
-                className="hidden"
-                accept=".csv,.xlsx,.xls"
-                onChange={handleFileUpload}
-              />
+              <input type="file" id="fileInput" className="hidden" accept=".csv,.xlsx,.xls" onChange={handleFileUpload} />
               <label htmlFor="fileInput" className="cursor-pointer">
                 <div className="flex flex-col items-center gap-4">
                   <div className="p-4 rounded-full bg-primary/10">
                     <UploadIcon className="w-12 h-12 text-primary" />
                   </div>
                   <div>
-                    <p className="text-lg font-semibold mb-1">
-                      Drop your files here or click to browse
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Supported formats: CSV, XLSX, XLS
-                    </p>
+                    <p className="text-lg font-semibold mb-1">Drop your files here or click to browse</p>
+                    <p className="text-sm text-muted-foreground">Supported formats: CSV, XLSX, XLS</p>
                   </div>
-                  <Button type="button">Select File</Button>
+                  <Button type="button" disabled={uploading}>{uploading ? "Uploading..." : "Select File"}</Button>
                 </div>
               </label>
             </div>
@@ -95,9 +103,7 @@ const Upload = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold mb-2">CSV Files</h3>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Upload comma-separated value files
-                  </p>
+                  <p className="text-sm text-muted-foreground mb-3">Upload comma-separated value files</p>
                   <ul className="text-sm text-muted-foreground space-y-1">
                     <li>• UTF-8 encoding preferred</li>
                     <li>• Header row required</li>

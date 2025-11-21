@@ -1,16 +1,18 @@
+// src/pages/Home.tsx
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { TrendingUp, Users, ShoppingCart, Target, BarChart3, Lock, RefreshCw, Database } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "@/lib/api";
 
 const Home = () => {
   const navigate = useNavigate();
-
-  const metrics = [
-    { label: "Growth Rate", value: "+24.5%", icon: TrendingUp, color: "text-success" },
-    { label: "Active Customers", value: "12,458", icon: Users, color: "text-primary" },
-    { label: "Total Orders", value: "8,392", icon: ShoppingCart, color: "text-accent" },
-  ];
+  const [metrics, setMetrics] = useState({
+    growthRate: "+0.0%",
+    activeCustomers: "0",
+    totalOrders: "0",
+  });
 
   const features = [
     {
@@ -45,6 +47,35 @@ const Home = () => {
     },
   ];
 
+  const load = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/analytics`);
+      if (!res.ok) throw new Error("No analytics");
+      const json = await res.json();
+      setMetrics({
+        growthRate: `${json.growthRate ?? 0}%`,
+        activeCustomers: (json.activeCustomers ?? 0).toLocaleString(),
+        totalOrders: (json.totalOrders ?? 0).toLocaleString(),
+      });
+    } catch (e) {
+      // keep defaults if backend missing
+      console.warn("Home analytics failed:", e);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    const handler = () => load();
+    window.addEventListener("data-updated", handler);
+    return () => window.removeEventListener("data-updated", handler);
+  }, []);
+
+  const metricList = [
+    { label: "Growth Rate", value: metrics.growthRate, icon: TrendingUp, color: "text-success" },
+    { label: "Active Customers", value: metrics.activeCustomers, icon: Users, color: "text-primary" },
+    { label: "Total Orders", value: metrics.totalOrders, icon: ShoppingCart, color: "text-accent" },
+  ];
+
   return (
     <div className="min-h-screen pt-20 pb-12">
       {/* Hero Section */}
@@ -71,7 +102,7 @@ const Home = () => {
       {/* Metrics Section */}
       <section className="container mx-auto px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {metrics.map((metric) => (
+          {metricList.map((metric) => (
             <Card key={metric.label} className="p-6 hover:shadow-lg transition-shadow">
               <div className="flex items-start justify-between">
                 <div>
@@ -91,11 +122,9 @@ const Home = () => {
       <section className="container mx-auto px-6 py-12">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-4">Powerful Features</h2>
-          <p className="text-muted-foreground">
-            Everything you need to make informed decisions about your sales strategy
-          </p>
+          <p className="text-muted-foreground">Everything you need to make informed decisions about your sales strategy</p>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature) => (
             <Card key={feature.title} className="p-6 hover:shadow-lg transition-shadow">

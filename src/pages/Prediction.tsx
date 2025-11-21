@@ -1,3 +1,4 @@
+// src/pages/Prediction.tsx
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -5,13 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrendingUp, Target } from "lucide-react";
 import { useState } from "react";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+import { API_BASE_URL } from "@/lib/api";
 
 type PredictionResult = {
   predictedSales: number;
   confidenceLevel: string;
-  growthTrend: number; // percentage
+  growthTrend: number;
   insights: string[];
   recommendation: string;
 };
@@ -48,6 +48,7 @@ const Prediction = () => {
     setLoading(true);
 
     try {
+      // call model endpoint (keeps existing behavior)
       const response = await fetch(`${API_BASE_URL}/predict`, {
         method: "POST",
         headers: {
@@ -69,6 +70,30 @@ const Prediction = () => {
 
       const data: PredictionResult = await response.json();
       setResult(data);
+
+      // persist the prediction (server will recompute same model and save to DB)
+      try {
+        const saveResp = await fetch(`${API_BASE_URL}/predictions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            productName,
+            category,
+            unitPrice: numericUnitPrice,
+            discount: numericDiscount,
+            region,
+            season,
+          }),
+        });
+        if (!saveResp.ok) {
+          console.warn("Failed to persist prediction.");
+        } else {
+          // notify other pages
+          window.dispatchEvent(new Event("data-updated"));
+        }
+      } catch (err) {
+        console.error("Persist error:", err);
+      }
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Something went wrong while generating prediction.");
@@ -87,7 +112,6 @@ const Prediction = () => {
           </p>
         </div>
 
-        {/* Prediction Accuracy Card */}
         <Card className="mb-8 p-6 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border-primary/10">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
@@ -108,19 +132,12 @@ const Prediction = () => {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Input Form */}
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-6">Product Details</h2>
-
             <div className="space-y-4">
               <div>
                 <Label htmlFor="productName">Product Name</Label>
-                <Input
-                  id="productName"
-                  placeholder="Enter product name"
-                  value={productName}
-                  onChange={(e) => setProductName(e.target.value)}
-                />
+                <Input id="productName" placeholder="Enter product name" value={productName} onChange={(e) => setProductName(e.target.value)} />
               </div>
 
               <div>
@@ -142,26 +159,11 @@ const Prediction = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="unitPrice">Unit Price ($)</Label>
-                  <Input
-                    id="unitPrice"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={unitPrice}
-                    onChange={(e) => setUnitPrice(e.target.value)}
-                  />
+                  <Input id="unitPrice" type="number" min="0" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} />
                 </div>
                 <div>
                   <Label htmlFor="discount">Discount (%)</Label>
-                  <Input
-                    id="discount"
-                    type="number"
-                    min="0"
-                    max="90"
-                    step="1"
-                    value={discount}
-                    onChange={(e) => setDiscount(e.target.value)}
-                  />
+                  <Input id="discount" type="number" min="0" max="90" step="1" value={discount} onChange={(e) => setDiscount(e.target.value)} />
                 </div>
               </div>
 
@@ -198,52 +200,34 @@ const Prediction = () => {
               </div>
 
               {error && (
-                <p className="text-sm text-red-500 border border-red-200 bg-red-50 rounded-md px-3 py-2">
-                  {error}
-                </p>
+                <p className="text-sm text-red-500 border border-red-200 bg-red-50 rounded-md px-3 py-2">{error}</p>
               )}
 
-              <Button
-                className="w-full"
-                size="lg"
-                onClick={handlePredict}
-                disabled={loading}
-              >
+              <Button className="w-full" size="lg" onClick={handlePredict} disabled={loading}>
                 <TrendingUp className="mr-2 w-5 h-5" />
                 {loading ? "Generating..." : "Generate Prediction"}
               </Button>
             </div>
           </Card>
 
-          {/* Results Card */}
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-6">Prediction Results</h2>
 
             {result ? (
               <div className="space-y-6">
                 <div className="p-4 bg-secondary rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Predicted Sales (Next Month)
-                  </p>
-                  <p className="text-3xl font-bold text-primary">
-                    ${result.predictedSales.toLocaleString()}
-                  </p>
+                  <p className="text-sm text-muted-foreground mb-1">Predicted Sales (Next Month)</p>
+                  <p className="text-3xl font-bold text-primary">${result.predictedSales.toLocaleString()}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 bg-secondary rounded-lg">
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Confidence Level
-                    </p>
+                    <p className="text-sm text-muted-foreground mb-1">Confidence Level</p>
                     <p className="text-xl font-semibold">{result.confidenceLevel}</p>
                   </div>
                   <div className="p-4 bg-secondary rounded-lg">
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Growth Trend
-                    </p>
-                    <p className="text-xl font-semibold text-emerald-500">
-                      +{result.growthTrend}%
-                    </p>
+                    <p className="text-sm text-muted-foreground mb-1">Growth Trend</p>
+                    <p className="text-xl font-semibold text-emerald-500">+{result.growthTrend}%</p>
                   </div>
                 </div>
 
@@ -257,16 +241,13 @@ const Prediction = () => {
                 </div>
 
                 <div className="p-4 bg-accent/5 border border-accent/20 rounded-lg">
-                  <p className="text-sm font-medium text-accent">
-                    💡 Recommendation: {result.recommendation}
-                  </p>
+                  <p className="text-sm font-medium text-accent">💡 Recommendation: {result.recommendation}</p>
                 </div>
               </div>
             ) : (
               <div className="text-sm text-muted-foreground">
                 Fill in the product details on the left and click{" "}
-                <span className="font-medium">Generate Prediction</span> to see
-                the forecast here.
+                <span className="font-medium">Generate Prediction</span> to see the forecast here.
               </div>
             )}
           </Card>
