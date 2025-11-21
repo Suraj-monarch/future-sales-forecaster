@@ -1,73 +1,121 @@
-# Welcome to your Lovable project
+# 📊 Predictive Model for Sales
+A complete AI-powered sales forecasting application built using **React + TypeScript**, **FastAPI**, **SQLite**, and **Recharts**.  
+This system predicts future sales, updates analytics in real-time, manages historical insights, and allows users to upload CSV/Excel data for improved forecasting.
 
-## Project info
+---
 
-**URL**: https://lovable.dev/projects/e744a9be-b055-4977-8968-6ca31879f748
+## ⚡ Tech Stack
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/e744a9be-b055-4977-8968-6ca31879f748) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
+### **Frontend**
+- React + TypeScript
 - Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- TailwindCSS + shadcn/ui
+- Recharts (Data Visualization)
+- Lucide Icons
+- React Router
 
-## How can I deploy this project?
+### **Backend**
+- FastAPI (Python)
+- SQLite (Local persistent database)
+- Uvicorn (ASGI Server)
+- Pydantic (Request validation)
+- CORS Middleware
 
-Simply open [Lovable](https://lovable.dev/projects/e744a9be-b055-4977-8968-6ca31879f748) and click on Share -> Publish.
+### **Other Tools**
+- Git & GitHub
+- CSV/XLSX file handling
+- REST API architecture
 
-## Can I connect a custom domain to my Lovable project?
+---
 
-Yes, you can!
+## 🌟 Features
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### 🔮 **Sales Prediction**
+- Enter product, pricing, discount, region, and season details  
+- FastAPI model generates predicted sales  
+- Confidence metrics & insights included  
+- Prediction results saved to database  
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+### 📈 **Real-Time Analytics**
+- Overview metrics update automatically:
+  - Growth Rate  
+  - Active Customers  
+  - Total Orders  
+- Charts generated using Recharts:
+  - Sales vs Forecast  
+  - Category distribution  
+  - Regional performance  
+  - Monthly trends  
+
+### 🕒 **Prediction History**
+- View past prediction results  
+- See accuracy, trends, and actual vs predicted numbers  
+- Automatically updates after new predictions  
+
+### 📤 **Upload Data**
+- Upload CSV/XLSX sales data  
+- Files stored in backend `/uploads`  
+- Triggers analytics refresh  
+
+### ⚙️ **Settings**
+- Update user profile  
+- Configure prediction model settings  
+- Notification preferences  
+- Data retention & update rules  
+- Settings saved persistently in the backend  
+
+---
+
+## 🛠️ Installation & Setup
+
+### **1. Clone the Repository**
+```bash
+git clone <repo-url>
+cd data-forecaster-x-main
+
+
+##Create virtual environment:
+cd backend
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+
+
+##Start backend:
+uvicorn main:app --reload --port 8000
+
+##▶️ Run Frontend (React + Vite)
+##Install dependencies:
+npm install
+
+##Start dev server:
+npm run dev
+
+##🧩 Environment Variables
+##Create .env in the project root:
+VITE_API_BASE_URL=http://localhost:8000
+
+
+
+##📁 Folder Structure:
+project/
+│
+├── backend/
+│   ├── main.py
+│   ├── app_data.db
+│   ├── uploads/
+│   └── venv/
+│
+└── src/
+    ├── pages/
+    │   ├── Home.tsx
+    │   ├── Prediction.tsx
+    │   ├── Analytics.tsx
+    │   ├── History.tsx
+    │   ├── Upload.tsx
+    │   └── Settings.tsx
+    │
+    ├── components/
+    ├── lib/api.ts
+    ├── App.tsx
+    └── main.tsx
